@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#0d1f0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="사육관리표">
+<title>사육관리표</title>
+<script>
+const manifestData = {
+  name:"사육관리표", short_name:"사육관리표", description:"사육 개체 관리 및 일별 기록 앱",
+  start_url:"./", display:"standalone", background_color:"#0d1f0f", theme_color:"#0d1f0f", orientation:"portrait",
+  icons:[{ src:"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgcng9IjMyIiBmaWxsPSIjMGQxZjBmIi8+PHRleHQgeT0iLjllbSIgZm9udC1zaXplPSIxMjAiIHg9IjE2Ij7wn6auPC90ZXh0Pjwvc3ZnPg==", sizes:"192x192", type:"image/svg+xml" }]
+};
+const blob = new Blob([JSON.stringify(manifestData)], {type:'application/json'});
+document.head.appendChild(Object.assign(document.createElement('link'),{rel:'manifest',href:URL.createObjectURL(blob)}));
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'Noto Sans KR',sans-serif;background:#0d1f0f;color:#d4edda;overscroll-behavior:none;}
+input,textarea,select,button{font-family:inherit;}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-thumb{background:#2d4a2f;border-radius:4px;}
+input[type="file"]{display:none;}
+.page{display:none;flex-direction:column;height:calc(100vh - 62px);overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.page.active{display:flex;}
+textarea{resize:vertical;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeUp .25s ease forwards;}
+
+/* Themes */
+body.forest{--bg:#0d1f0f;--card:#162518;--border:#2d4a2f;--text:#d4edda;--accent:#4ade80;--sub:#86b89a;--danger:#f87171;--info:#60a5fa;}
+body.ocean {--bg:#0a1628;--card:#0f2040;--border:#1e3a5f;--text:#d0e8f5;--accent:#38bdf8;--sub:#7eb8d4;--danger:#f87171;--info:#a78bfa;}
+body.dusk  {--bg:#1a0f2e;--card:#261542;--border:#3d2263;--text:#e9d5ff;--accent:#c084fc;--sub:#a47cc0;--danger:#f87171;--info:#38bdf8;}
+body.sand  {--bg:#1c1508;--card:#2a2010;--border:#4a3820;--text:#f5e6c8;--accent:#fbbf24;--sub:#c8a87a;--danger:#f87171;--info:#34d399;}
+body{background:var(--bg);color:var(--text);}
+body.fs-small{font-size:13px;} body.fs-medium{font-size:15px;} body.fs-large{font-size:17px;}
+
+/* Base */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;}
+.card.accent-left{border-left:3px solid var(--accent);}
+.btn{border:1px solid var(--accent);border-radius:10px;padding:10px 18px;cursor:pointer;font-size:inherit;font-weight:600;transition:all .2s;}
+.btn-primary{background:var(--accent);color:var(--bg);}
+.btn-outline{background:transparent;color:var(--accent);}
+.btn-danger{background:transparent;color:var(--danger);border-color:var(--danger);}
+.btn:active{transform:scale(.97);}
+.input{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:inherit;width:100%;outline:none;transition:border-color .2s;}
+.input:focus{border-color:var(--accent);}
+.label{font-size:11px;color:var(--sub);margin-bottom:5px;display:block;font-weight:600;letter-spacing:.5px;}
+.tag{background:var(--border);border-radius:20px;padding:3px 10px;font-size:12px;color:var(--sub);display:inline-block;}
+.tag-accent{background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);}
+.section-title{font-size:12px;color:var(--sub);font-weight:700;margin:14px 0 8px;text-transform:uppercase;letter-spacing:1px;}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:300;display:none;align-items:flex-end;backdrop-filter:blur(4px);}
+.modal-overlay.open{display:flex;}
+.modal-sheet{width:100%;background:var(--card);border-radius:22px 22px 0 0;max-height:92vh;display:flex;flex-direction:column;animation:fadeUp .25s ease;}
+.modal-header{padding:20px 20px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);flex-shrink:0;}
+.modal-header h3{font-size:17px;color:var(--accent);}
+.modal-body{padding:20px;overflow-y:auto;flex:1;}
+.modal-close{background:none;border:none;color:var(--sub);font-size:26px;cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center;}
+
+/* Nav */
+#nav{position:fixed;bottom:0;left:0;right:0;height:62px;background:var(--card);border-top:1px solid var(--border);display:flex;z-index:200;padding-bottom:env(safe-area-inset-bottom);}
+.nav-btn{flex:1;background:none;border:none;cursor:pointer;color:var(--sub);font-size:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:color .2s;padding:8px 4px;}
+.nav-btn.active{color:var(--accent);}
+.nav-btn .icon{font-size:22px;line-height:1;}
+
+/* Clock card */
+#clock-card{background:linear-gradient(135deg,var(--card),var(--border));border-radius:18px;padding:24px 20px;margin-bottom:12px;text-align:center;position:relative;overflow:hidden;}
+#clock-card::before{content:'🦎';position:absolute;right:-10px;top:-10px;font-size:80px;opacity:.06;}
+#date-display{font-size:22px;font-weight:700;color:var(--accent);}
+#day-display{color:var(--sub);font-size:13px;margin-top:4px;}
+#time-display{font-size:42px;font-weight:900;letter-spacing:3px;margin-top:10px;color:var(--accent);font-variant-numeric:tabular-nums;}
+
+/* Calendar */
+.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.cal-day-header{font-size:11px;text-align:center;padding:5px 0;font-weight:700;}
+.cal-cell{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;font-size:13px;position:relative;transition:background .15s;user-select:none;}
+.cal-cell:active{background:var(--border)!important;}
+.cal-cell.today{background:var(--accent);color:var(--bg);font-weight:700;}
+.cal-cell.has-event::after{content:'';position:absolute;bottom:3px;width:5px;height:5px;border-radius:50%;background:var(--accent);}
+.cal-cell.today.has-event::after{background:var(--bg);}
+
+/* Timeline */
+.timeline{position:relative;padding-left:24px;}
+.timeline::before{content:'';position:absolute;left:8px;top:6px;bottom:6px;width:2px;background:var(--border);border-radius:2px;}
+.timeline-item{position:relative;margin-bottom:14px;}
+.timeline-dot{position:absolute;left:-21px;top:14px;width:11px;height:11px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);}
+
+/* Animal photo */
+.animal-photo{width:60px;height:60px;border-radius:12px;object-fit:cover;border:2px solid var(--border);flex-shrink:0;}
+.animal-photo-placeholder{width:60px;height:60px;border-radius:12px;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;}
+.photo-upload-circle{width:80px;height:80px;border-radius:50%;border:2.5px dashed var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden;transition:border-color .2s;flex-shrink:0;}
+.photo-upload-circle:hover{border-color:var(--accent);}
+.photo-upload-circle img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+
+/* Search highlight */
+mark{background:var(--accent);color:var(--bg);border-radius:3px;padding:0 2px;}
+
+/* Toggle */
+.toggle{position:relative;width:52px;height:30px;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;inset:0;background:var(--border);border-radius:15px;cursor:pointer;transition:background .3s;}
+.toggle-slider::before{content:'';position:absolute;width:22px;height:22px;left:4px;top:4px;background:white;border-radius:50%;transition:transform .3s;box-shadow:0 2px 4px rgba(0,0,0,.3);}
+.toggle input:checked + .toggle-slider{background:var(--accent);}
+.toggle input:checked + .toggle-slider::before{transform:translateX(22px);}
+
+/* Install banner */
+#install-banner{display:none;position:fixed;top:0;left:0;right:0;z-index:500;background:var(--accent);color:var(--bg);padding:12px 16px;font-size:13px;font-weight:600;align-items:center;justify-content:space-between;gap:10px;}
+#install-banner.show{display:flex;}
+
+/* Notif banner */
+#notif-banner{display:none;background:color-mix(in srgb,var(--accent) 10%,var(--card));border:1px solid var(--accent);border-radius:12px;padding:14px;margin-bottom:12px;align-items:center;gap:12px;}
+#notif-banner.show{display:flex;}
+
+/* PWA steps */
+.pwa-step{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;}
+.pwa-step-num{width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;}
+
+/* Empty */
+.empty{text-align:center;padding:48px 20px;color:var(--sub);}
+.empty-icon{font-size:52px;margin-bottom:14px;}
+
+/* Photo */
+.photo-preview{width:100%;border-radius:10px;margin-top:10px;max-height:200px;object-fit:cover;}
+.photo-btn{display:flex;align-items:center;gap:10px;cursor:pointer;padding:12px 14px;border:1.5px dashed var(--border);border-radius:10px;color:var(--sub);font-size:13px;transition:border-color .2s;}
+.photo-btn:hover{border-color:var(--accent);}
+
+/* Utils */
+.row{display:flex;align-items:center;}
+.row-between{display:flex;align-items:center;justify-content:space-between;}
+.gap-8{gap:8px;}.gap-10{gap:10px;}
+.mt-8{margin-top:8px;}.mt-12{margin-top:12px;}.mb-12{margin-bottom:12px;}
+.flex-1{flex:1;}.fw-700{font-weight:700;}.fs-12{font-size:12px;}.fs-13{font-size:13px;}
+.color-accent{color:var(--accent);}.color-sub{color:var(--sub);}.color-danger{color:var(--danger);}
+.w-100{width:100%;}
+.icon-btn{background:none;border:none;cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;font-size:18px;}
+.p-16{padding:16px;}
+.page-content{padding:16px;padding-bottom:20px;}
+</style>
+</head>
+<body class="forest fs-medium">
+
+<!-- Install Banner -->
+<div id="install-banner">
+  <span>📱 홈 화면에 앱 추가하기</span>
+  <button id="install-btn" class="btn btn-outline" style="padding:6px 14px;font-size:12px;border-color:var(--bg);color:var(--bg);">설치</button>
+  <button id="install-dismiss" style="background:none;border:none;color:var(--bg);font-size:20px;cursor:pointer;">×</button>
+</div>
+
+<div id="app">
+
+  <!-- HOME -->
+  <div class="page active" id="page-home">
+    <div class="page-content" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+      <div id="notif-banner">
+        <span style="font-size:24px;">🔔</span>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:13px;">알림 권한 필요</div>
+          <div style="font-size:12px;color:var(--sub);margin-top:2px;">일정 알림을 받으려면 권한을 허용해주세요</div>
+        </div>
+        <button class="btn btn-primary" style="padding:8px 14px;font-size:12px;white-space:nowrap;" onclick="requestNotifPermission()">허용</button>
+      </div>
+      <div id="clock-card" class="fade-in">
+        <div id="date-display"></div>
+        <div id="day-display"></div>
+        <div id="time-display"></div>
+      </div>
+      <div id="today-events-section" style="display:none;" class="fade-in">
+        <div class="section-title">📢 오늘의 일정</div>
+        <div id="today-events-list"></div>
+      </div>
+      <div class="card fade-in" id="cal-card">
+        <div class="row-between" style="margin-bottom:14px;">
+          <button class="icon-btn color-accent" id="cal-prev" style="font-size:22px;">‹</button>
+          <span id="cal-title" class="fw-700" style="font-size:16px;"></span>
+          <button class="icon-btn color-accent" id="cal-next" style="font-size:22px;">›</button>
+        </div>
+        <div class="calendar-grid" id="cal-headers"></div>
+        <div class="calendar-grid" id="cal-body" style="margin-top:4px;gap:3px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANIMALS -->
+  <div class="page" id="page-animals">
+    <div class="page-content" style="flex:1;overflow-y:auto;">
+      <div class="row-between mb-12">
+        <h2 class="color-accent" style="font-size:20px;">🦎 사육 개체</h2>
+        <button class="btn btn-primary" onclick="openAnimalForm()">+ 추가</button>
+      </div>
+      <div id="animals-list"></div>
+    </div>
+  </div>
+
+  <!-- RECORDS -->
+  <div class="page" id="page-records">
+    <div class="page-content" style="flex:1;overflow-y:auto;">
+      <div class="row-between mb-12">
+        <div>
+          <h2 class="color-accent" style="font-size:20px;">📋 일별 기록</h2>
+          <div id="record-clock" class="fs-12 color-sub" style="margin-top:3px;"></div>
+        </div>
+        <button class="btn btn-primary" onclick="openRecordForm()">+ 기록</button>
+      </div>
+      <div id="records-list"></div>
+    </div>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="page" id="page-search">
+    <div class="page-content" style="flex:1;overflow-y:auto;">
+      <h2 class="color-accent" style="font-size:20px;margin-bottom:14px;">🔍 키워드 검색</h2>
+      <div style="position:relative;margin-bottom:10px;">
+        <input class="input" id="search-input" placeholder="검색어 입력 (예: 구내염, 탈피)" oninput="runSearch()">
+        <button onclick="document.getElementById('search-input').value='';runSearch();" class="icon-btn color-sub" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:20px;">×</button>
+      </div>
+      <div class="row-between mb-12">
+        <label class="row gap-8 fs-13 color-sub" style="cursor:pointer;">
+          <input type="checkbox" id="exact-match" onchange="runSearch()" style="accent-color:var(--accent);width:16px;height:16px;">
+          정확한 키워드만
+        </label>
+        <span id="search-count" class="tag" style="display:none;"></span>
+      </div>
+      <div id="keyword-tags" class="mb-12"></div>
+      <div id="search-results"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="page" id="page-settings">
+    <div class="page-content" style="flex:1;overflow-y:auto;padding-bottom:40px;">
+      <h2 class="color-accent" style="font-size:20px;margin-bottom:20px;">⚙️ 설정</h2>
+      <div class="card">
+        <div class="fw-700 mb-12">🎨 테마</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" id="theme-btns"></div>
+      </div>
+      <div class="card">
+        <div class="fw-700 mb-12">📝 글자 크기</div>
+        <div class="row gap-10">
+          <button class="btn btn-outline flex-1" id="fs-small"  onclick="setFontSize('small')">작게</button>
+          <button class="btn btn-outline flex-1" id="fs-medium" onclick="setFontSize('medium')">보통</button>
+          <button class="btn btn-outline flex-1" id="fs-large"  onclick="setFontSize('large')">크게</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row-between">
+          <div>
+            <div class="fw-700">🔔 일정 알림</div>
+            <div class="fs-12 color-sub mt-8">앱 실행 시 당일 일정을 휴대폰에 알림</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="notif-toggle" onchange="toggleNotifications(this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div id="notif-status" class="fs-12 color-sub mt-8" style="padding:8px 0;border-top:1px solid var(--border);"></div>
+      </div>
+      <div class="card">
+        <div class="fw-700 mb-12">📱 모바일 앱으로 설치</div>
+        <div class="pwa-step">
+          <div class="pwa-step-num">1</div>
+          <div><div class="fs-13 fw-700">Android (Chrome)</div><div class="fs-12 color-sub mt-8">브라우저 메뉴 → "홈 화면에 추가"</div></div>
+        </div>
+        <div class="pwa-step">
+          <div class="pwa-step-num">2</div>
+          <div><div class="fs-13 fw-700">iPhone (Safari)</div><div class="fs-12 color-sub mt-8">공유 버튼(□↑) → "홈 화면에 추가"</div></div>
+        </div>
+        <div class="pwa-step">
+          <div class="pwa-step-num">3</div>
+          <div><div class="fs-13 fw-700">알림 최적화</div><div class="fs-12 color-sub mt-8">앱 설치 후 알림 권한 허용 → 매일 앱 실행 시 당일 알림 자동 예약</div></div>
+        </div>
+      </div>
+      <div class="card" style="text-align:center;margin-bottom:0;">
+        <div style="font-size:42px;margin-bottom:10px;">🦎</div>
+        <div class="fw-700 color-accent" style="font-size:20px;">사육관리표</div>
+        <div class="fs-12 color-sub mt-8">v1.1.0 · 개인용 사육 관리 앱</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#app -->
+
+<nav id="nav">
+  <button class="nav-btn active" data-page="home"    onclick="switchPage('home')"><span class="icon">🏠</span>홈</button>
+  <button class="nav-btn"        data-page="animals" onclick="switchPage('animals')"><span class="icon">🦎</span>사육개체</button>
+  <button class="nav-btn"        data-page="records" onclick="switchPage('records')"><span class="icon">📋</span>일별기록</button>
+  <button class="nav-btn"        data-page="search"  onclick="switchPage('search')"><span class="icon">🔍</span>검색</button>
+  <button class="nav-btn"        data-page="settings" onclick="switchPage('settings')"><span class="icon">⚙️</span>설정</button>
+</nav>
+
+<!-- EVENT MODAL -->
+<div class="modal-overlay" id="modal-event">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <h3 id="event-modal-title">일정 관리</h3>
+      <button class="modal-close" onclick="closeModal('modal-event')">×</button>
+    </div>
+    <div class="modal-body" id="event-modal-body"></div>
+  </div>
+</div>
+
+<!-- ANIMAL FORM MODAL -->
+<div class="modal-overlay" id="modal-animal">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <h3 id="animal-modal-title">개체 추가</h3>
+      <button class="modal-close" onclick="closeModal('modal-animal')">×</button>
+    </div>
+    <div class="modal-body">
+      <!-- Profile Photo -->
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px;">
+        <label class="photo-upload-circle" for="a-photo-input" id="a-photo-label">
+          <span style="font-size:32px;" id="a-photo-icon">📷</span>
+          <img id="a-photo-img" src="" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="프로필">
+        </label>
+        <input type="file" id="a-photo-input" accept="image/*" onchange="handleAnimalPhoto(event)">
+        <div>
+          <div class="fw-700" style="font-size:14px;">프로필 사진</div>
+          <div class="fs-12 color-sub mt-8">탭하여 사진 선택</div>
+          <button type="button" id="a-photo-remove" onclick="removeAnimalPhoto()" style="display:none;background:none;border:none;color:var(--danger);font-size:12px;cursor:pointer;margin-top:4px;padding:0;">사진 제거</button>
+        </div>
+      </div>
+      <div class="mb-12">
+        <label class="label">이름 *</label>
+        <input class="input" id="a-name" placeholder="예: 초록이">
+      </div>
+      <div class="mb-12">
+        <label class="label">종</label>
+        <input class="input" id="a-species" placeholder="예: 크레스티드 게코">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div><label class="label">나이</label><input class="input" id="a-age" placeholder="예: 2살"></div>
+        <div><label class="label">무게 (g)</label><input class="input" id="a-weight" placeholder="예: 45"></div>
+      </div>
+      <div class="mb-12">
+        <label class="label">성별</label>
+        <div class="row gap-8">
+          <button class="btn btn-outline flex-1" id="g-male"      onclick="selectGender('수컷')">수컷</button>
+          <button class="btn btn-outline flex-1" id="g-female"    onclick="selectGender('암컷')">암컷</button>
+          <button class="btn btn-outline flex-1" id="g-unknown"   onclick="selectGender('미구분')">미구분</button>
+        </div>
+      </div>
+      <div class="mb-12">
+        <label class="label">특이사항</label>
+        <textarea class="input" id="a-notes" rows="3" placeholder="건강상태, 특징 등"></textarea>
+      </div>
+      <button class="btn btn-primary w-100" onclick="saveAnimal()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- RECORD FORM MODAL -->
+<div class="modal-overlay" id="modal-record">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <h3 id="record-modal-title">기록 추가</h3>
+      <button class="modal-close" onclick="closeModal('modal-record')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="record-form-time" class="fs-12 color-sub mb-12"></div>
+      <div class="mb-12">
+        <label class="label">개체 선택</label>
+        <select class="input" id="r-animal"><option value="">-- 개체 선택 --</option></select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div><label class="label">온도 (°C)</label><input class="input" id="r-temp" type="number" placeholder="28"></div>
+        <div><label class="label">습도 (%)</label><input class="input" id="r-humidity" type="number" placeholder="60"></div>
+      </div>
+      <div class="mb-12">
+        <label class="label">먹이 급여</label>
+        <input class="input" id="r-food" placeholder="예: 귀뚜라미 5마리">
+      </div>
+      <div class="mb-12">
+        <label class="label">특이사항 (키워드)</label>
+        <textarea class="input" id="r-notes" rows="3" placeholder="예: 구내염 의심, 탈피 시작, 식욕 저하"></textarea>
+      </div>
+      <div class="mb-12">
+        <label class="label">사진 첨부</label>
+        <label class="photo-btn" for="r-photo-input">
+          <span style="font-size:22px;">📷</span><span class="color-sub">사진 선택</span>
+        </label>
+        <input type="file" id="r-photo-input" accept="image/*" onchange="handleRecordPhoto(event)">
+        <img id="r-photo-preview" class="photo-preview" style="display:none;">
+      </div>
+      <button class="btn btn-primary w-100" onclick="saveRecord()">기록 저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════ STATE ═══════════════════
+let state = {
+  animals:[], records:[], events:[],
+  settings:{ theme:'forest', fontSize:'medium', notificationsOn:false },
+  calYear: new Date().getFullYear(),
+  calMonth: new Date().getMonth(),
+  editAnimalId: null,
+  editRecordId: null,
+  selectedGender: '미구분',
+  animalPhotoData: null,
+  recordPhotoData: null,
+  swReg: null,
+};
+
+function load() {
+  try {
+    state.animals  = JSON.parse(localStorage.getItem('ct_animals')  || '[]');
+    state.records  = JSON.parse(localStorage.getItem('ct_records')  || '[]');
+    state.events   = JSON.parse(localStorage.getItem('ct_events')   || '[]');
+    state.settings = {...state.settings, ...JSON.parse(localStorage.getItem('ct_settings') || '{}')};
+    // migrate 미상 → 미구분
+    state.animals = state.animals.map(a => ({...a, gender: a.gender === '미상' ? '미구분' : a.gender}));
+  } catch(e){}
+}
+function save(key, data) { try { localStorage.setItem('ct_' + key, JSON.stringify(data)); } catch(e){} }
+
+// ═══════════════════ INIT ═══════════════════
+window.addEventListener('DOMContentLoaded', async () => {
+  load();
+  applySettings();
+  initClock();
+  renderCalendar();
+  renderAnimals();
+  renderRecords();
+  renderKeywordTags();
+  renderThemeButtons();
+  updateFontSizeBtns();
+  initServiceWorker();
+  checkNotifPermission();
+  scheduleEventNotifications();
+  checkInstallPrompt();
+});
+
+// ═══════════════════ SERVICE WORKER ═══════════════════
+async function initServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    const swCode = `
+const CACHE='ct-v1';
+self.addEventListener('install', e=>self.skipWaiting());
+self.addEventListener('activate', e=>e.waitUntil(clients.claim()));
+self.addEventListener('fetch', e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>new Response(''))));});
+self.addEventListener('notificationclick', e=>{
+  e.notification.close();
+  e.waitUntil(clients.matchAll({type:'window'}).then(cs=>{if(cs.length>0)cs[0].focus();else clients.openWindow(self.location.origin);}));
+});
+self.addEventListener('message', e=>{
+  if(e.data&&e.data.type==='SCHEDULE'){
+    const{title,body,delay,tag}=e.data;
+    setTimeout(()=>{self.registration.showNotification(title,{body,tag,vibrate:[200,100,200],requireInteraction:false});},Math.max(0,delay));
+  }
+});`;
+    const blob = new Blob([swCode], {type:'application/javascript'});
+    const reg = await navigator.serviceWorker.register(URL.createObjectURL(blob), {scope:'./'});
+    state.swReg = reg;
+  } catch(e){}
+}
+
+// ═══════════════════ NOTIFICATIONS ═══════════════════
+async function requestNotifPermission() {
+  // Android 네이티브 앱은 Java에서 권한 처리
+  if (typeof window.AndroidBridge !== 'undefined') {
+    state.settings.notificationsOn = true;
+    save('settings', state.settings);
+    document.getElementById('notif-banner').classList.remove('show');
+    document.getElementById('notif-toggle').checked = true;
+    scheduleEventNotifications();
+    updateNotifStatus();
+    return;
+  }
+  if (!('Notification' in window)) { alert('이 브라우저는 알림을 지원하지 않습니다.\nChrome 앱으로 설치 후 사용해주세요.'); return; }
+  const perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    state.settings.notificationsOn = true;
+    save('settings', state.settings);
+    document.getElementById('notif-banner').classList.remove('show');
+    document.getElementById('notif-toggle').checked = true;
+    scheduleEventNotifications();
+    updateNotifStatus();
+  }
+}
+function checkNotifPermission() {
+  const toggle = document.getElementById('notif-toggle');
+  if (!('Notification' in window)) { updateNotifStatus('지원안함'); return; }
+  toggle.checked = state.settings.notificationsOn;
+  if (Notification.permission === 'denied') { updateNotifStatus('차단됨'); return; }
+  if (Notification.permission !== 'granted' && state.settings.notificationsOn) {
+    document.getElementById('notif-banner').classList.add('show');
+  }
+  updateNotifStatus();
+}
+function updateNotifStatus(override) {
+  const el = document.getElementById('notif-status');
+  if (!el) return;
+  if (override) { el.textContent = '⚠️ 알림 ' + override; return; }
+  if (!('Notification' in window)) { el.textContent = '⚠️ 이 브라우저는 알림 미지원'; return; }
+  if (Notification.permission === 'granted' && state.settings.notificationsOn)
+    el.textContent = '✅ 알림 활성화됨 · 앱 실행 시 당일 일정 자동 예약';
+  else if (Notification.permission === 'denied')
+    el.textContent = '❌ 알림 차단됨 · 브라우저 설정에서 허용해주세요';
+  else
+    el.textContent = '⭕ 알림 비활성화';
+}
+function toggleNotifications(on) {
+  if (on && Notification.permission !== 'granted') { requestNotifPermission(); return; }
+  state.settings.notificationsOn = on;
+  save('settings', state.settings);
+  if (on) scheduleEventNotifications();
+  updateNotifStatus();
+}
+function scheduleEventNotifications() {
+  if (!state.settings.notificationsOn || Notification.permission !== 'granted') return;
+  const now = new Date();
+  state.events.filter(e => e.date === todayStr() && e.time).forEach(ev => {
+    const [h,m] = ev.time.split(':').map(Number);
+    const notifTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
+    const delay = notifTime - now;
+    if (delay > 0) scheduleNotif(`📅 ${ev.title}`, `오늘 ${ev.time} 일정이 있습니다.`, delay, 'ev-'+ev.id);
+  });
+}
+function scheduleNotif(title, body, delay, tag) {
+  // Android 네이티브 앱: 시스템 알림 직접 사용
+  if (typeof window.AndroidBridge !== 'undefined') {
+    window.AndroidBridge.scheduleNotification(title, body, Math.max(0, delay), tag);
+    return;
+  }
+  // PWA: Service Worker 사용
+  if (state.swReg && state.swReg.active) {
+    state.swReg.active.postMessage({type:'SCHEDULE', title, body, delay, tag}); return;
+  }
+  // 폴백: setTimeout
+  setTimeout(() => {
+    if (Notification.permission === 'granted') try { new Notification(title,{body,tag,vibrate:[200,100,200]}); } catch(e){}
+  }, delay);
+}
+
+// ═══════════════════ CLOCK ═══════════════════
+const DAY_KR = ['일요일','월요일','화요일','수요일','목요일','금요일','토요일'];
+const MONTH_KR = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+function pad(n) { return String(n).padStart(2,'0'); }
+function dateStr(d) { return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function todayStr() { return dateStr(new Date()); }
+function initClock() {
+  updateClock(); setInterval(updateClock, 1000); setInterval(updateRecordClock, 1000);
+}
+function updateClock() {
+  const n = new Date();
+  document.getElementById('date-display').textContent = `${n.getFullYear()}년 ${MONTH_KR[n.getMonth()]} ${n.getDate()}일`;
+  document.getElementById('day-display').textContent = DAY_KR[n.getDay()];
+  document.getElementById('time-display').textContent = `${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
+}
+function updateRecordClock() {
+  const n = new Date();
+  const el = document.getElementById('record-clock');
+  if (el) el.textContent = `${n.getFullYear()}.${pad(n.getMonth()+1)}.${pad(n.getDate())} ${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
+}
+
+// ═══════════════════ NAV ═══════════════════
+function switchPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelector(`[data-page="${page}"]`).classList.add('active');
+  if (page === 'records') updateRecordClock();
+  if (page === 'search') renderKeywordTags();
+}
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ═══════════════════ CALENDAR ═══════════════════
+function renderCalendar() {
+  const {calYear, calMonth} = state;
+  document.getElementById('cal-title').textContent = `${calYear}년 ${MONTH_KR[calMonth]}`;
+  document.getElementById('cal-headers').innerHTML = ['일','월','화','수','목','금','토'].map((d,i)=>
+    `<div class="cal-day-header" style="color:${i===0?'var(--danger)':i===6?'var(--info)':'var(--sub)'}">${d}</div>`).join('');
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const now = new Date();
+  const isToday = d => d && calYear===now.getFullYear() && calMonth===now.getMonth() && d===now.getDate();
+  let cells = Array(firstDay).fill(null).concat(Array.from({length:daysInMonth},(_,i)=>i+1));
+  while(cells.length%7!==0) cells.push(null);
+  document.getElementById('cal-body').innerHTML = cells.map((d,i) => {
+    if (!d) return '<div></div>';
+    const ds = `${calYear}-${pad(calMonth+1)}-${pad(d)}`;
+    const hasEvt = state.events.some(e=>e.date===ds);
+    const col = i%7===0?'var(--danger)':i%7===6?'var(--info)':'var(--text)';
+    return `<div class="cal-cell${isToday(d)?' today':''}${hasEvt?' has-event':''}"
+      style="color:${isToday(d)?'var(--bg)':col}" onclick="openDateModal(${d})">${d}</div>`;
+  }).join('');
+  renderTodayEvents();
+}
+function renderTodayEvents() {
+  const evts = state.events.filter(e=>e.date===todayStr());
+  const section = document.getElementById('today-events-section');
+  const list = document.getElementById('today-events-list');
+  if (evts.length===0) { section.style.display='none'; return; }
+  section.style.display='block';
+  list.innerHTML = evts.map(e=>`
+    <div class="card accent-left row-between" style="padding:12px 14px;">
+      <div>
+        <div class="fw-700">${e.title}</div>
+        <div class="fs-12 color-sub">${e.time?'⏰ '+e.time:'종일'}${e.memo?' · '+e.memo:''}</div>
+      </div>
+      <button class="icon-btn color-danger" onclick="deleteEvent(${e.id})">🗑</button>
+    </div>`).join('');
+}
+function openDateModal(day) {
+  const ds = `${state.calYear}-${pad(state.calMonth+1)}-${pad(day)}`;
+  const evts = state.events.filter(e=>e.date===ds);
+  document.getElementById('event-modal-title').textContent = `${state.calYear}.${pad(state.calMonth+1)}.${pad(day)} 일정`;
+  document.getElementById('event-modal-body').innerHTML =
+    (evts.length>0 ? evts.map(e=>`
+      <div class="card row-between" style="padding:12px 14px;margin-bottom:10px;">
+        <div>
+          <div class="fw-700">${e.title}</div>
+          ${e.time?`<div class="fs-12 color-sub">⏰ ${e.time}</div>`:''}
+          ${e.memo?`<div class="fs-12 color-sub mt-8">${e.memo}</div>`:''}
+        </div>
+        <button class="icon-btn color-danger" onclick="deleteEvent(${e.id});openDateModal(${day})">🗑</button>
+      </div>`).join('') : '') +
+    `<div style="border-top:1px solid var(--border);padding-top:16px;margin-top:8px;">
+      <div class="fw-700 color-accent mb-12">+ 새 일정 추가</div>
+      <div class="mb-12"><label class="label">제목</label><input class="input" id="ev-title" placeholder="일정 제목"></div>
+      <div class="mb-12"><label class="label">시간 (알림 발송)</label><input class="input" type="time" id="ev-time"></div>
+      <div class="mb-12"><label class="label">메모</label><input class="input" id="ev-memo" placeholder="메모 (선택)"></div>
+      <button class="btn btn-primary w-100" onclick="saveEvent('${ds}')">일정 저장</button>
+    </div>`;
+  openModal('modal-event');
+}
+function saveEvent(ds) {
+  const title = document.getElementById('ev-title').value.trim();
+  if (!title) return;
+  state.events.push({id:Date.now(), date:ds, title, time:document.getElementById('ev-time').value, memo:document.getElementById('ev-memo').value});
+  save('events', state.events);
+  closeModal('modal-event');
+  renderCalendar();
+  scheduleEventNotifications();
+}
+function deleteEvent(id) {
+  state.events = state.events.filter(e=>e.id!==id);
+  save('events', state.events);
+  renderCalendar();
+}
+document.getElementById('cal-prev').onclick = () => {
+  if (state.calMonth===0){state.calYear--;state.calMonth=11;} else state.calMonth--;
+  renderCalendar();
+};
+document.getElementById('cal-next').onclick = () => {
+  if (state.calMonth===11){state.calYear++;state.calMonth=0;} else state.calMonth++;
+  renderCalendar();
+};
+
+// ═══════════════════ ANIMALS ═══════════════════
+function renderAnimals() {
+  const el = document.getElementById('animals-list');
+  if (state.animals.length===0) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">🦎</div>등록된 개체가 없습니다<br><span class="fs-12 color-sub">+ 추가 버튼으로 개체를 등록하세요</span></div>`; return;
+  }
+  el.innerHTML = state.animals.map(a => `
+    <div class="card fade-in">
+      <div class="row gap-10">
+        ${a.photo
+          ? `<img src="${a.photo}" class="animal-photo" alt="${a.name}">`
+          : `<div class="animal-photo-placeholder">🦎</div>`}
+        <div style="flex:1;min-width:0;">
+          <div class="row-between">
+            <div>
+              <div class="fw-700 color-accent" style="font-size:18px;">${a.name}</div>
+              <div class="fs-13 color-sub mt-8">${a.species||'종 미상'}</div>
+            </div>
+            <div class="row gap-8">
+              <button class="btn btn-outline" style="padding:6px 12px;" onclick="openAnimalForm(${a.id})">✏️</button>
+              <button class="btn" style="padding:6px 12px;border-color:var(--danger);color:var(--danger);" onclick="deleteAnimal(${a.id})">🗑</button>
+            </div>
+          </div>
+          <div class="row" style="flex-wrap:wrap;gap:6px;margin-top:8px;">
+            ${a.age?`<span class="tag">나이: ${a.age}</span>`:''}
+            ${a.gender&&a.gender!=='미구분'?`<span class="tag">성별: ${a.gender}</span>`:''}
+            ${a.weight?`<span class="tag">무게: ${a.weight}g</span>`:''}
+          </div>
+        </div>
+      </div>
+      ${a.notes?`<div class="fs-13 color-sub" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">${a.notes}</div>`:''}
+    </div>`).join('');
+}
+
+function openAnimalForm(id) {
+  state.editAnimalId = id||null;
+  document.getElementById('animal-modal-title').textContent = id ? '개체 수정' : '개체 추가';
+  const a = id ? state.animals.find(x=>x.id===id) : {};
+  document.getElementById('a-name').value    = a.name    || '';
+  document.getElementById('a-species').value = a.species || '';
+  document.getElementById('a-age').value     = a.age     || '';
+  document.getElementById('a-weight').value  = a.weight  || '';
+  document.getElementById('a-notes').value   = a.notes   || '';
+  // Photo
+  state.animalPhotoData = a.photo || null;
+  const img = document.getElementById('a-photo-img');
+  const icon = document.getElementById('a-photo-icon');
+  const removeBtn = document.getElementById('a-photo-remove');
+  if (a.photo) {
+    img.src = a.photo; img.style.display='block'; icon.style.display='none'; removeBtn.style.display='inline';
+  } else {
+    img.style.display='none'; icon.style.display='block'; removeBtn.style.display='none';
+  }
+  selectGender(a.gender||'미구분');
+  openModal('modal-animal');
+}
+function handleAnimalPhoto(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    state.animalPhotoData = ev.target.result;
+    const img = document.getElementById('a-photo-img');
+    img.src = ev.target.result; img.style.display='block';
+    document.getElementById('a-photo-icon').style.display='none';
+    document.getElementById('a-photo-remove').style.display='inline';
+  };
+  reader.readAsDataURL(file);
+}
+function removeAnimalPhoto() {
+  state.animalPhotoData = null;
+  document.getElementById('a-photo-img').style.display='none';
+  document.getElementById('a-photo-icon').style.display='block';
+  document.getElementById('a-photo-remove').style.display='none';
+  document.getElementById('a-photo-input').value='';
+}
+function selectGender(g) {
+  state.selectedGender = g;
+  const map = {'수컷':'g-male','암컷':'g-female','미구분':'g-unknown'};
+  Object.entries(map).forEach(([gender,id]) => {
+    const el = document.getElementById(id);
+    if (el) el.className = gender===g ? 'btn btn-primary flex-1' : 'btn btn-outline flex-1';
+  });
+}
+function saveAnimal() {
+  const name = document.getElementById('a-name').value.trim(); if (!name) return;
+  const data = { name, species:document.getElementById('a-species').value.trim(),
+    age:document.getElementById('a-age').value.trim(), weight:document.getElementById('a-weight').value.trim(),
+    gender:state.selectedGender, notes:document.getElementById('a-notes').value.trim(),
+    photo:state.animalPhotoData||null };
+  if (state.editAnimalId) {
+    state.animals = state.animals.map(a=>a.id===state.editAnimalId?{...a,...data}:a);
+  } else {
+    state.animals.push({id:Date.now(),...data});
+  }
+  save('animals', state.animals);
+  renderAnimals();
+  closeModal('modal-animal');
+}
+function deleteAnimal(id) {
+  if (!confirm('개체를 삭제하시겠습니까?')) return;
+  state.animals = state.animals.filter(a=>a.id!==id);
+  save('animals', state.animals);
+  renderAnimals();
+}
+
+// ═══════════════════ RECORDS ═══════════════════
+function renderRecords() {
+  const el = document.getElementById('records-list');
+  if (state.records.length===0) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📋</div>기록이 없습니다</div>`; return;
+  }
+  const grouped = state.records.reduce((acc,r)=>{(acc[r.date]=acc[r.date]||[]).push(r);return acc;},{});
+  const sorted = Object.keys(grouped).sort((a,b)=>b.localeCompare(a));
+  el.innerHTML = sorted.map(date => {
+    const items = grouped[date]
+      .sort((a,b)=>a.time.localeCompare(b.time))
+      .map(r => {
+        const animal = state.animals.find(a=>a.id==r.animalId);
+        return `
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="card" style="margin-bottom:0;">
+              <div class="row-between">
+                <div class="row gap-8">
+                  <span class="fw-700 color-accent">${r.time}</span>
+                  ${animal?`<span class="tag">${animal.name}${animal.species?' · '+animal.species:''}</span>`:''}
+                </div>
+                <div class="row gap-8">
+                  <button class="icon-btn" style="color:var(--accent);font-size:16px;" onclick="openEditRecord(${r.id})" title="수정">✏️</button>
+                  <button class="icon-btn color-sub" style="font-size:16px;" onclick="deleteRecord(${r.id})">×</button>
+                </div>
+              </div>
+              <div class="row" style="flex-wrap:wrap;gap:6px;margin-top:8px;">
+                ${r.temp?`<span class="tag">🌡 ${r.temp}°C</span>`:''}
+                ${r.humidity?`<span class="tag">💧 ${r.humidity}%</span>`:''}
+                ${r.food?`<span class="tag">🍖 ${r.food}</span>`:''}
+              </div>
+              ${r.notes?`<div class="fs-13 color-sub" style="margin-top:8px;">${r.notes}</div>`:''}
+              ${r.photo?`<img src="${r.photo}" class="photo-preview" loading="lazy">`:''}
+            </div>
+          </div>`;
+      }).join('');
+    return `<div class="fs-12 color-sub fw-700" style="margin:14px 0 8px;padding-left:4px;">📅 ${date}</div>
+      <div class="timeline">${items}</div>`;
+  }).join('');
+}
+
+function openRecordForm(editId) {
+  state.editRecordId = editId || null;
+  document.getElementById('record-modal-title').textContent = editId ? '기록 수정' : '기록 추가';
+  const now = new Date();
+  const sel = document.getElementById('r-animal');
+  sel.innerHTML = '<option value="">-- 개체 선택 --</option>' +
+    state.animals.map(a=>`<option value="${a.id}">${a.name}${a.species?' ('+a.species+')':''}</option>`).join('');
+
+  if (editId) {
+    const r = state.records.find(x=>x.id===editId);
+    if (r) {
+      document.getElementById('record-form-time').textContent = `원본: ${r.date} ${r.time} (수정 시 현재 시간으로 업데이트)`;
+      sel.value = r.animalId||'';
+      document.getElementById('r-temp').value = r.temp||'';
+      document.getElementById('r-humidity').value = r.humidity||'';
+      document.getElementById('r-food').value = r.food||'';
+      document.getElementById('r-notes').value = r.notes||'';
+      state.recordPhotoData = r.photo||null;
+      const preview = document.getElementById('r-photo-preview');
+      if (r.photo) { preview.src=r.photo; preview.style.display='block'; } else { preview.style.display='none'; }
+    }
+  } else {
+    document.getElementById('record-form-time').textContent = `${now.getFullYear()}.${pad(now.getMonth()+1)}.${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    ['r-temp','r-humidity','r-food','r-notes'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('r-photo-preview').style.display='none';
+    state.recordPhotoData = null;
+  }
+  openModal('modal-record');
+}
+function openEditRecord(id) { openRecordForm(id); }
+
+function handleRecordPhoto(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    state.recordPhotoData = ev.target.result;
+    const preview = document.getElementById('r-photo-preview');
+    preview.src=ev.target.result; preview.style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+function saveRecord() {
+  const now = new Date();
+  if (state.editRecordId) {
+    // Edit: update content + timestamp
+    state.records = state.records.map(r => {
+      if (r.id !== state.editRecordId) return r;
+      return {
+        ...r,
+        timestamp: now.toISOString(),
+        date: dateStr(now),
+        time: `${pad(now.getHours())}:${pad(now.getMinutes())}`,
+        animalId: document.getElementById('r-animal').value,
+        temp: document.getElementById('r-temp').value.trim(),
+        humidity: document.getElementById('r-humidity').value.trim(),
+        food: document.getElementById('r-food').value.trim(),
+        notes: document.getElementById('r-notes').value.trim(),
+        photo: state.recordPhotoData,
+        edited: true,
+      };
+    });
+  } else {
+    state.records.unshift({
+      id:Date.now(), timestamp:now.toISOString(), date:dateStr(now),
+      time:`${pad(now.getHours())}:${pad(now.getMinutes())}`,
+      animalId:document.getElementById('r-animal').value,
+      temp:document.getElementById('r-temp').value.trim(),
+      humidity:document.getElementById('r-humidity').value.trim(),
+      food:document.getElementById('r-food').value.trim(),
+      notes:document.getElementById('r-notes').value.trim(),
+      photo:state.recordPhotoData||null,
+    });
+  }
+  save('records', state.records);
+  renderRecords();
+  renderKeywordTags();
+  closeModal('modal-record');
+  state.editRecordId = null;
+}
+function deleteRecord(id) {
+  state.records = state.records.filter(r=>r.id!==id);
+  save('records', state.records);
+  renderRecords();
+}
+
+// ═══════════════════ SEARCH ═══════════════════
+function renderKeywordTags() {
+  const el = document.getElementById('keyword-tags');
+  const words = [...new Set(state.records.flatMap(r =>
+    `${r.food||''} ${r.notes||''}`.split(/[\s,\.、]+/).filter(k=>k.length>=2)
+  ))].slice(0,30);
+  if (!words.length) { el.innerHTML='<div class="fs-13 color-sub">기록된 키워드가 없습니다</div>'; return; }
+  el.innerHTML = `<div class="section-title">📌 기록된 키워드</div>` +
+    `<div style="display:flex;flex-wrap:wrap;gap:8px;">` +
+    words.map(k=>`<button class="tag" style="cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text);padding:5px 12px;font-size:13px;" onclick="setSearch('${k}')">${k}</button>`).join('') +
+    `</div>`;
+}
+function setSearch(kw) { document.getElementById('search-input').value=kw; runSearch(); }
+function runSearch() {
+  const query = document.getElementById('search-input').value.trim();
+  const countEl = document.getElementById('search-count');
+  const tagsEl = document.getElementById('keyword-tags');
+  const resultsEl = document.getElementById('search-results');
+  if (!query) { countEl.style.display='none'; tagsEl.style.display='block'; resultsEl.innerHTML=''; return; }
+  tagsEl.style.display='none';
+  const q = query.toLowerCase();
+  const results = state.records.filter(r => `${r.food||''} ${r.notes||''} ${r.temp||''} ${r.humidity||''}`.toLowerCase().includes(q));
+  countEl.style.display='inline-block'; countEl.textContent=`${results.length}건`;
+  if (!results.length) { resultsEl.innerHTML=`<div class="empty"><div class="empty-icon">🔎</div>"${query}" 검색 결과가 없습니다</div>`; return; }
+  function hl(text) {
+    if (!text) return '';
+    return text.replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'), '<mark>$1</mark>');
+  }
+  resultsEl.innerHTML = results.map(r => {
+    const animal = state.animals.find(a=>a.id==r.animalId);
+    return `<div class="card fade-in">
+      <div class="row gap-8 mb-8"><span class="fs-12 color-sub">${r.date} ${r.time}</span>${animal?`<span class="tag">${animal.name}</span>`:''}</div>
+      <div class="row" style="flex-wrap:wrap;gap:6px;margin-bottom:6px;">
+        ${r.temp?`<span class="tag">🌡 ${r.temp}°C</span>`:''}
+        ${r.humidity?`<span class="tag">💧 ${r.humidity}%</span>`:''}
+        ${r.food?`<span class="tag-accent tag">🍖 ${hl(r.food)}</span>`:''}
+      </div>
+      ${r.notes?`<div class="fs-13 color-sub">${hl(r.notes)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════ SETTINGS ═══════════════════
+const THEMES = {
+  forest:{label:'🌿 포레스트',bg:'#0d1f0f',accent:'#4ade80'},
+  ocean: {label:'🌊 오션',bg:'#0a1628',accent:'#38bdf8'},
+  dusk:  {label:'🌆 황혼',bg:'#1a0f2e',accent:'#c084fc'},
+  sand:  {label:'🏜 샌드',bg:'#1c1508',accent:'#fbbf24'},
+};
+function renderThemeButtons() {
+  document.getElementById('theme-btns').innerHTML = Object.entries(THEMES).map(([key,t])=>
+    `<button onclick="setTheme('${key}')" id="theme-btn-${key}"
+      style="padding:14px 12px;border-radius:12px;border:2px solid ${state.settings.theme===key?t.accent:t.bg};
+      background:${t.bg};color:${t.accent};cursor:pointer;font-family:inherit;font-size:14px;
+      display:flex;align-items:center;gap:8px;font-weight:600;transition:border .2s;">
+      <div style="width:14px;height:14px;border-radius:50%;background:${t.accent};flex-shrink:0;"></div>${t.label}
+    </button>`).join('');
+}
+function setTheme(theme) {
+  document.body.className = document.body.className.replace(/\bforest\b|\bocean\b|\bdusk\b|\bsand\b/, theme);
+  state.settings.theme = theme; save('settings', state.settings);
+  renderThemeButtons();
+}
+function setFontSize(size) {
+  document.body.className = document.body.className.replace(/\bfs-\w+\b/, 'fs-'+size);
+  state.settings.fontSize = size; save('settings', state.settings);
+  updateFontSizeBtns();
+}
+function updateFontSizeBtns() {
+  ['small','medium','large'].forEach(s => {
+    const el = document.getElementById('fs-'+s);
+    if (el) el.className = s===state.settings.fontSize ? 'btn btn-primary flex-1' : 'btn btn-outline flex-1';
+  });
+}
+function applySettings() {
+  document.body.className = `${state.settings.theme} fs-${state.settings.fontSize}`;
+  const toggle = document.getElementById('notif-toggle');
+  if (toggle) toggle.checked = state.settings.notificationsOn;
+}
+
+// ═══════════════════ PWA INSTALL ═══════════════════
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredPrompt = e;
+  document.getElementById('install-banner').classList.add('show');
+});
+document.getElementById('install-btn').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('install-banner').classList.remove('show');
+});
+document.getElementById('install-dismiss').addEventListener('click', () => {
+  document.getElementById('install-banner').classList.remove('show');
+});
+window.addEventListener('appinstalled', () => document.getElementById('install-banner').classList.remove('show'));
+function checkInstallPrompt() {
+  if (window.matchMedia('(display-mode: standalone)').matches)
+    document.getElementById('install-banner').classList.remove('show');
+}
+</script>
+</body>
+</html>
